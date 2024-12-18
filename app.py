@@ -25,9 +25,18 @@ class User(db.Model):
         return f"Email : {self.email}, Password: {self.password}"
 
 # function to render index page
-@app.route('/')
-def index():
+@app.route('/Register')
+def register():
     return render_template('index.html')
+
+@app.route('/Login')
+def login():
+    return render_template('login.html')
+
+@app.route('/user/<int:id>')
+def index(id):
+    data = User.query.get(id)
+    return render_template('index.html',data=data)
 
 @app.route('/user', methods=["POST"])
 def user():
