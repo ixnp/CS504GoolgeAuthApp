@@ -3,33 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Profile Page</title>
   </head>
   <body>
-    <h1>Register Form</h1>
-    <form action="/user" method="POST">
-      <label for="email">Email:</label>
-      <input
-        type="email"
-        id="email"
-        name="email"
-        placeholder="Email"
-        required
-      />
-      <br /><br />
-
-      <label for="password">Password:</label>
-      <input
-        type="password"
-        id="password"
-        name="password"
-        placeholder="Password"
-        required
-      />
-      <br /><br />
-
-      <!-- Submit button -->
-      <button type="submit">Login</button>
-    </form>
+    <h1>Profile Page</h1>
+    {% if data %}
+    <h2>ID: {{data.id}}</h2>
+    <h2>Email: {{data.email}}</h2>
+    <h2>Password: {{data.email}}</h2>
+    {% else %}
+    <p>No user found with this ID.</p>
+    {% endif %}
   </body>
 </html>
