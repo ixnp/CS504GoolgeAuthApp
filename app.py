@@ -24,10 +24,12 @@ class User(db.Model):
     def __repr__(self):
         return f"Email : {self.email}, Password: {self.password}"
 
-# function to render index page
+
 @app.route('/Register')
 def register():
-    return render_template('index.html')
+      
+    return render_template('register.html')
+
 
 @app.route('/Login')
 def login():
@@ -46,7 +48,17 @@ def user():
   user = User(email=email,password=password)
   db.session.add(user)
   db.session.commit()
-  return redirect('/')
+  new_user_id = user.id
+  return redirect(f'/user/{user.id}')
 
+@app.route('/auth', methods=["POST"])
+def auth():
+  email = request.form.get("email")
+  password = request.form.get("password")
+  user = User.query.filter_by(email=email).first()
+  if user and user.password == password:
+      return redirect(f'/user/{user.id}')
+  else:  
+      return "Invalid email or password", 401
 if __name__ == '__main__':
     app.run()
