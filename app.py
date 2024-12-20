@@ -18,6 +18,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
+# User Model
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(20), unique=False, nullable=False)
@@ -30,12 +31,13 @@ class User(db.Model):
         return f"Email : {self.email}, Password: {self.password} TOTP Secret: {self.secret}"
 
 
-@app.route("/Register")
+# View Routes for register, login and user
+@app.route("/register")
 def register():
     return render_template("register.html")
 
 
-@app.route("/Login")
+@app.route("/login")
 def login():
     return render_template("login.html")
 
@@ -46,6 +48,7 @@ def index(id):
     return render_template("index.html", data=data)
 
 
+# Create Route for user
 @app.route("/user", methods=["POST"])
 def user():
     email = request.form.get("email")
@@ -59,6 +62,7 @@ def user():
     return redirect(f"/user/{user.id}")
 
 
+# Route to generate QRCode
 # (Krishna, 2023b)
 @app.route("/qrcode/<int:id>")
 def qrcode_view(id):
@@ -82,6 +86,7 @@ def qrcode_view(id):
     return send_file(buffer, mimetype="image/png")
 
 
+# Authentication Route
 @app.route("/auth", methods=["POST"])
 def auth():
     email = request.form.get("email")
@@ -90,7 +95,7 @@ def auth():
 
     user = User.query.filter_by(email=email).first()
     if user and user.password == password:
-        totp = pyotp.TOTP(user.totp_secret)
+        totp = pyotp.TOTP(user.secret)
         if totp.verify(otp_code):
             return redirect(f"/user/{user.id}")
         else:
