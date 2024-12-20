@@ -8,12 +8,17 @@ import pyotp
 import qrcode
 from io import BytesIO
 from flask import send_file
+from flask import session
 
+# instantiate flask app
 app = Flask(__name__)
-app.debug = True
-
+# Secret key used for sessions
+app.secret_key = "very_secret_uber_secure_key"
+# configuring sqlitedb
+# This is where we would configur out db to use the docker db
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///site.db"
 
+# Initializes SQLAlchemy
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
@@ -44,6 +49,9 @@ def login():
 
 @app.route("/user/<int:id>")
 def index(id):
+    if "user_id" not in session or session["user_id"] != id:
+        return "User not authorized please return to login", 401
+
     data = User.query.get(id)
     return render_template("index.html", data=data)
 
@@ -58,6 +66,7 @@ def user():
     user = User(email=email, password=password, secret=secret)
     db.session.add(user)
     db.session.commit()
+    session["user_id"] = user.id
 
     return redirect(f"/user/{user.id}")
 
@@ -97,11 +106,19 @@ def auth():
     if user and user.password == password:
         totp = pyotp.TOTP(user.secret)
         if totp.verify(otp_code):
+            session["user_id"] = user.id
             return redirect(f"/user/{user.id}")
         else:
             return "Invalid passcode", 401
     else:
         return "Invalid email or password", 401
+
+
+# Logout route
+@app.route("/logout")
+def logout():
+    session.pop("user_id", None)
+    return redirect("/login")
 
 
 if __name__ == "__main__":
