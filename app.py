@@ -8,16 +8,22 @@ import pyotp
 import qrcode
 from io import BytesIO
 from flask import send_file
+from flask import session
 
+# instantiate flask app
 app = Flask(__name__)
-app.debug = True
-
+# Secret key used for sessions
+app.secret_key = "very_secret_uber_secure_key"
+# configuring sqlitedb
+# This is where we would configur out db to use the docker db
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///site.db"
 
+# Initializes SQLAlchemy
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 
+# User Model
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(20), unique=False, nullable=False)
@@ -30,22 +36,27 @@ class User(db.Model):
         return f"Email : {self.email}, Password: {self.password} TOTP Secret: {self.secret}"
 
 
-@app.route("/Register")
+# View Routes for register, login and user
+@app.route("/register")
 def register():
     return render_template("register.html")
 
 
-@app.route("/Login")
+@app.route("/login")
 def login():
     return render_template("login.html")
 
 
 @app.route("/user/<int:id>")
 def index(id):
+    if "user_id" not in session or session["user_id"] != id:
+        return "User not authorized please return to login", 401
+
     data = User.query.get(id)
     return render_template("index.html", data=data)
 
 
+# Create Route for user
 @app.route("/user", methods=["POST"])
 def user():
     email = request.form.get("email")
@@ -55,10 +66,12 @@ def user():
     user = User(email=email, password=password, secret=secret)
     db.session.add(user)
     db.session.commit()
+    session["user_id"] = user.id
 
     return redirect(f"/user/{user.id}")
 
 
+# Route to generate QRCode
 # (Krishna, 2023b)
 @app.route("/qrcode/<int:id>")
 def qrcode_view(id):
@@ -82,6 +95,7 @@ def qrcode_view(id):
     return send_file(buffer, mimetype="image/png")
 
 
+# Authentication Route
 @app.route("/auth", methods=["POST"])
 def auth():
     email = request.form.get("email")
@@ -90,13 +104,21 @@ def auth():
 
     user = User.query.filter_by(email=email).first()
     if user and user.password == password:
-        totp = pyotp.TOTP(user.totp_secret)
+        totp = pyotp.TOTP(user.secret)
         if totp.verify(otp_code):
+            session["user_id"] = user.id
             return redirect(f"/user/{user.id}")
         else:
             return "Invalid passcode", 401
     else:
         return "Invalid email or password", 401
+
+
+# Logout route
+@app.route("/logout")
+def logout():
+    session.pop("user_id", None)
+    return redirect("/login")
 
 
 if __name__ == "__main__":
